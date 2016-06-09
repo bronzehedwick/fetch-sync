@@ -105,18 +105,18 @@ Initialise fetchSync.
 Example:
 
     // Import client lib...
-  
+
     // ES6
     import fetchSync from 'fetch-sync'
-  
+
     // ES5
     var fetchSync = require('fetch-sync')
-  
+
     // Script, using bundled dist
     <script src="/node_modules/fetch-sync/dist/fetch-sync.min.js"></script>
-  
+
     // Initialise, passing in worker lib location...
-  
+
     fetchSync.init({
       workerUrl: 'node_modules/fetch-sync/dist/fetch-sync.sw.js',
       workerOptions: {
@@ -155,19 +155,19 @@ Examples:
           method: 'POST',
           body: { name: '' }
         })
-        
+
         // cancel the sync...
         post.cancel()
 
 - unnamed with options
 
         const headers = new Headers();
-        
+
         headers.append('Authorization', 'Basic abcdefghijklmnopqrstuvwxyz');
-        
+
         // `fetchSync` accepts the same args as `fetch`...
         fetchSync('/send-message', { headers })
-        
+
 - named with options
 
         fetchSync('/get-messages', { headers })
@@ -191,9 +191,9 @@ There are some properties/methods on the returned Promise. See the [Sync API](#s
 Example:
 
     fetchSync('SendMessage', '/message', { body: 'Hello, World!' })
-        
+
     const sync = fetchSync.get('SendMessage')
-        
+
     sync.then((response) => {
       if (response.ok) {
         alert(`Your message was sent at ${new Date(sync.syncedOn).toDateString()}.`
@@ -270,7 +270,6 @@ Useful for named syncs that you want to retrieve later on.
 
 ## Dependencies
 
-- [redux](https://github.com/reactjs/redux) (& redux-thunk)
 - [idb-wrapper](https://github.com/jensarps/IDBWrapper)
 - [serialise-request](https://github.com/sdgluck/serialise-request)
 - [serialise-response](https://github.com/sdgluck/serialise-response)
