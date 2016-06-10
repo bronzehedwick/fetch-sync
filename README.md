@@ -271,6 +271,7 @@ Useful for named syncs that you want to retrieve later on.
 ## Dependencies
 
 - [idb-wrapper](https://github.com/jensarps/IDBWrapper)
+- [sw-register](https://github.com/sdgluck/sw-register)
 - [serialise-request](https://github.com/sdgluck/serialise-request)
 - [serialise-response](https://github.com/sdgluck/serialise-response)
 - [mini-defer](https://github.com/sdgluck/mini-defer)

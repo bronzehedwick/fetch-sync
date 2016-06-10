@@ -20,13 +20,13 @@
   })
 
   const channel = msgr({
-    [REGISTER_SYNC]: ({ data }) => {
-      return registerSync(data.sync)
-        .then(() => addSync(data.sync))
-    },
-    [CANCEL_SYNC]: ({ data }) => {
-      return new Promise(store.remove.bind(store, data.id))
-    },
+    // On init call, respond with the operations from the IDB
+    [INIT]: (_, respond) => store.getAll(respond),
+    // On register call, register a sync with worker and then add to IDB
+    [REGISTER_SYNC]: ({ data: { sync } }) => registerSync(sync).then(() => addSync(sync)),
+    // On cancel call, remove the sync from IDB
+    [CANCEL_SYNC]: ({ data: { id } }) => new Promise(store.remove.bind(store, id)),
+    // On cancel all call, remove all syncs from IDB
     [CANCEL_ALL_SYNCS]: () => {
       return new Promise(store.getAll.bind(store)).then((syncs) => {
         const ids = syncs.map((sync) => sync.id)

@@ -5,6 +5,7 @@
 const msgr = require('msgr')
 const shortid = require('shortid')
 const defer = require('mini-defer')
+const register = require('sw-register')
 const serialiseRequest = require('serialise-request')
 const serialiseResponse = require('serialise-response')
 
@@ -18,6 +19,29 @@ let channel = null
 let hasStartedInit = false
 let hasBackgroundSyncSupport = true
 let serviceWorker = navigator.serviceWorker.controller
+
+/**
+ * Start a channel with the worker. Wrapped so that we can delay
+ * execution until we know we have a worker that controls the page.
+ */
+const openCommsChannel = () => msgr(serviceWorker, {
+  [INIT]: (event) => {
+    const data = event.data.map(createSync, false)
+    syncs.push(...data)
+    ready.resolve()
+  },
+  [SYNC_RESULT]: (event) => {
+    const data = JSON.parse(event.data)
+    const sync = syncs[data.id]
+    if (sync) {
+      const response = serialiseResponse.deserialise(data.response)
+      sync.resolve(response)
+      if (sync.name) {
+        sync.response = response
+      }
+    }
+  }
+})
 
 function createSync (obj, isNew = true) {
   const sync = Object.assign({}, obj, defer())
@@ -53,54 +77,6 @@ function createSync (obj, isNew = true) {
   return sync
 }
 
-function setServiceWorker (options) {
-  return Promise.resolve()
-    .then(() => {
-      // Get existing service worker or get registration promise
-      if (serviceWorker) return serviceWorker
-      else if (!options) return navigator.serviceWorker.ready
-    })
-    .then((registration) => {
-      if (registration) {
-        // Take this service worker that the registration returned
-        serviceWorker = registration
-      } else if (!registration && options) {
-        // No registration but we have options to register one
-        return navigator.serviceWorker
-          .register(options.workerUrl, options.workerOptions)
-          .then((registration) => options.forceUpdate && registration.update())
-      } else if (!registration && !options) {
-        // No existing worker,
-        // no registration that returned one,
-        // no options to register one
-        throw new Error(
-          'no active service worker or configuration passed to install one'
-        )
-      }
-    })
-}
-
-function openCommsChannel () {
-  return msgr({
-    [INIT]: (event) => {
-      const data = event.data.map(createSync, false)
-      syncs.push(...data)
-      ready.resolve()
-    },
-    [SYNC_RESULT]: (event) => {
-      const data = JSON.parse(event.data)
-      const sync = syncs[data.id]
-      if (sync) {
-        const response = serialiseResponse.deserialise(data.response)
-        sync.resolve(response)
-        if (sync.name) {
-          sync.response = response
-        }
-      }
-    }
-  })
-}
-
 // ---
 // Public
 // ---
@@ -113,7 +89,7 @@ function openCommsChannel () {
  * @returns {Promise}
  */
 export default function fetchSync (name, request, options) {
-  if (arguments.length < 3) {
+  if (typeof options === 'undefined') {
     request = name
     options = request
   }
@@ -156,8 +132,8 @@ function fetchSync_init (options = null) {
   hasStartedInit = true
 
   return Promise.resolve()
-    .then(setServiceWorker)
-    .then(openCommsChannel)
+    .then(() => register(options))
+    .then(() => openCommsChannel())
     .then(() => ready.promise, (err) => {
       hasStartedInit = false
       console.warn('fetchSync initialisation failed: ' + err.message)
@@ -206,6 +182,8 @@ function fetchSync_cancelAll () {
   return channel.send(CANCEL_ALL_SYNCS)
 }
 
+// Wrap each method (except `init`) in a function to check whether
+// initialisation has been started and reject if it has not
 Object.keys(fetchSync).forEach((methodName) => {
   if (methodName === 'init') return
   Object.defineProperty(fetchSync, methodName, {
