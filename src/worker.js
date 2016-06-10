@@ -1,4 +1,6 @@
 (function () {
+  'use strict'
+  
   /* global self:false, require:false, fetch:false, __DEV__:false */
 
   const msgr = require('msgr')
@@ -6,7 +8,7 @@
   const serialiseRequest = require('serialise-request')
   const serialiseResponse = require('serialise-response')
 
-  const { OPEN_COMMS, REGISTER_SYNC, 
+  const { INIT, REGISTER_SYNC, 
     CANCEL_SYNC, CANCEL_ALL_SYNCS } = require('./Messages')
 
   const store = new IDBStore({
@@ -18,9 +20,6 @@
   })
 
   const channel = msgr({
-    [OPEN_COMMS]: (event) => {
-      channel.setDefaultPort(event.ports[0])
-    },
     [REGISTER_SYNC]: ({ data }) => {
       return registerSync(data.sync)
         .then(() => addSync(data.sync))
@@ -34,6 +33,10 @@
         return new Promise(store.removeBatch.bind(store, ids))
       })
     }
+  })
+  
+  store.getAll(function (syncs) {
+    channel.send(INIT, syncs)
   })
 
   function registerSync (sync) {
